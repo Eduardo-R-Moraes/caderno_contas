@@ -3,12 +3,11 @@
 // ============================================================
 import { answerOf } from '../lib/questions';
 import { fmtNum, fmtQ, fmtSec } from '../lib/format';
-import type { Round, Stats } from '../lib/types';
-import Notebook from './Notebook';
+import type { Round } from '../lib/types';
 
-interface Props { round: Round; stats: Stats; onAgain: () => void; onConfig: () => void }
+interface Props { round: Round; onAgain: () => void; onConfig: () => void }
 
-export default function EndScreen({ round, stats, onAgain, onConfig }: Props) {
+export default function EndScreen({ round, onAgain, onConfig }: Props) {
   const done = round.rights + round.wrongs;
   const avg = done ? round.history.reduce((s, h) => s + h.ms, 0) / done : 0;
   const acc = done ? Math.round(round.rights / done * 100) : 0;
@@ -35,10 +34,6 @@ export default function EndScreen({ round, stats, onAgain, onConfig }: Props) {
           <button className="primary" id="btn-again" onClick={onAgain}>Jogar de novo</button>
           <button id="btn-config" onClick={onConfig}>Mudar configurações</button>
         </div>
-      </div>
-      <div className="panel">
-        <div className="panel-head"><h2>O caderninho</h2></div>
-        <Notebook stats={stats} />
       </div>
     </section>
   );

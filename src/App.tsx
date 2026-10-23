@@ -45,9 +45,7 @@ export default function App() {
       {screen === 'setup' && (
         <SetupScreen
           settings={settings}
-          stats={stats}
           onStart={s => { setSettings(s); save('cc.settings', s); startRound(); }}
-          onReset={() => updateStats({})}
         />
       )}
       {screen === 'game' && (
@@ -60,7 +58,7 @@ export default function App() {
         />
       )}
       {screen === 'end' && lastRound && (
-        <EndScreen round={lastRound} stats={stats} onAgain={startRound} onConfig={() => setScreen('setup')} />
+        <EndScreen round={lastRound} onAgain={startRound} onConfig={() => setScreen('setup')} />
       )}
     </div>
   );

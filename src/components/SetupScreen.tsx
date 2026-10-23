@@ -4,10 +4,8 @@
 import { useState } from 'react';
 import { OP_KEYS } from '../lib/config';
 import { readSetupForm, toDraft, type Draft, type OpDraft } from '../lib/setupForm';
-import type { Op, Order, Settings, Stats } from '../lib/types';
+import type { Op, Order, Settings } from '../lib/types';
 import OpCard from './OpCard';
-import Notebook from './Notebook';
-import ResetNotebook from './ResetNotebook';
 
 const ORDERS: { value: Order; id: string; label: string }[] = [
   { value: 'none', id: 'order-none', label: 'Qualquer' },
@@ -17,12 +15,10 @@ const ORDERS: { value: Order; id: string; label: string }[] = [
 
 interface Props {
   settings: Settings;
-  stats: Stats;
   onStart: (s: Settings) => void;
-  onReset: () => void;
 }
 
-export default function SetupScreen({ settings, stats, onStart, onReset }: Props) {
+export default function SetupScreen({ settings, onStart }: Props) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(settings));
   const [error, setError] = useState<string | null>(null);
 
@@ -96,17 +92,6 @@ export default function SetupScreen({ settings, stats, onStart, onReset }: Props
           <button className="primary" id="btn-start" onClick={start}>Começar partida</button>
           <p className="error-msg" id="setup-error" hidden={!error}>{error}</p>
         </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-head">
-          <h2>O caderninho</h2>
-          <div className="actions" id="reset-box">
-            <ResetNotebook hasStats={Object.keys(stats).length > 0} onReset={onReset} />
-          </div>
-        </div>
-        <p className="hint">Tudo o que você já respondeu, ordenado da conta mais difícil para a mais fácil. Fica salvo neste navegador.</p>
-        <Notebook stats={stats} />
       </div>
     </section>
   );

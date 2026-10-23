@@ -7,17 +7,16 @@ import { answerOf, isCorrect } from '../lib/questions';
 import { nextQuestion, record } from '../lib/raffle';
 import { fmtNum, fmtQ, fmtSec } from '../lib/format';
 import { play } from '../lib/sounds';
-import type { Question, Raffle, Round, Settings, Stats } from '../lib/types';
+import type { Question, Round, Settings, Stats } from '../lib/types';
 import Timer from './Timer';
-import RafflePanel from './RafflePanel';
 
-interface Current { q: Question; key: string; note: number; raffle: Raffle; startedAt: number }
+interface Current { q: Question; key: string; note: number; startedAt: number }
 interface Feedback { cls: '' | 'ok' | 'err'; text: string }
 
 function askNext(settings: Settings, stats: Stats, recent: string[]): Current {
   const raffle = nextQuestion(settings, stats, recent);
   const c = raffle.cands[raffle.chosen];
-  return { q: c.q, key: c.key, note: c.note, raffle, startedAt: performance.now() };
+  return { q: c.q, key: c.key, note: c.note, startedAt: performance.now() };
 }
 
 interface Props {
@@ -39,9 +38,9 @@ export default function GameScreen({ settings, stats, onStats, onEnd }: Props) {
 
   const { q } = current;
   const qText = fmtQ(q);
-  // Encolhe a fonte para a conta inteira caber na largura do quadro (cada caractere mono ≈ 0,62 em)
+  // Encolhe a fonte para a conta inteira caber na largura do quadro (cada caractere da fonte pixel = 1 em)
   const chars = (qText + ' = ?').length;
-  const fontSize = `min(4rem, calc(92cqi / ${(chars * 0.62).toFixed(2)}))`;
+  const fontSize = `min(3.2rem, calc(92cqi / ${chars}))`;
   const qLabel = q.rd && q.rd > 0
     ? `Quanto é (arredonde para ${q.rd} ${q.rd === 1 ? 'casa' : 'casas'})`
     : 'Quanto é';
@@ -101,21 +100,17 @@ export default function GameScreen({ settings, stats, onStats, onEnd }: Props) {
         <button id="btn-stop" onClick={() => onEnd(round)}>Encerrar partida</button>
       </div>
 
-      <div className="game">
-        <div className="panel board">
-          <span className="eyebrow" id="q-label">{qLabel}</span>
-          <div className="question" id="question" style={{ fontSize }}>{qText} <span className="eq">=</span> ?</div>
-          <form className="answer-row" id="answer-form" autoComplete="off" onSubmit={submit}>
-            <button type="button" className="sign" id="btn-sign" title="Trocar sinal" aria-label="Trocar sinal" onClick={toggleSign}>±</button>
-            <input ref={inputRef} type="text" id="answer" inputMode="decimal" enterKeyHint="send" autoCorrect="off" spellCheck={false}
-              aria-label="Sua resposta" value={answer} onChange={e => setAnswer(e.target.value)} />
-            <button type="submit" className="primary">OK</button>
-          </form>
-          <Timer key={current.startedAt} startedAt={current.startedAt} />
-          <div className={'feedback ' + feedback.cls} id="feedback">{feedback.text}</div>
-        </div>
-
-        <RafflePanel raffle={current.raffle} recent={recent} />
+      <div className="panel board">
+        <span className="eyebrow" id="q-label">{qLabel}</span>
+        <div className="question" id="question" style={{ fontSize }}>{qText} <span className="eq">=</span> ?</div>
+        <form className="answer-row" id="answer-form" autoComplete="off" onSubmit={submit}>
+          <button type="button" className="sign" id="btn-sign" title="Trocar sinal" aria-label="Trocar sinal" onClick={toggleSign}>±</button>
+          <input ref={inputRef} type="text" id="answer" inputMode="decimal" enterKeyHint="send" autoCorrect="off" spellCheck={false}
+            aria-label="Sua resposta" value={answer} onChange={e => setAnswer(e.target.value)} />
+          <button type="submit" className="primary">OK</button>
+        </form>
+        <Timer key={current.startedAt} startedAt={current.startedAt} />
+        <div className={'feedback ' + feedback.cls} id="feedback">{feedback.text}</div>
       </div>
     </section>
   );
