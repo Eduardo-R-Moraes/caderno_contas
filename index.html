@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Treino de contas que sorteia com mais frequência o que você ainda erra ou demora.">
+<title>Caderno de Contas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: caderno quadriculado; tela de configuração em blocos por operação, partida com a conta grande à esquerda e a rifa à direita */
+:root {
+  --paper: #f5f7f6;
+  --grid: rgba(36, 80, 200, 0.07);
+  --surface: #ffffff;
+  --ink: #1b2430;
+  --muted: #5b6876;
+  --line: #d9dfe4;
+  --accent: #2450c8;
+  --accent-soft: rgba(36, 80, 200, 0.10);
+  --ok: #1d8656;
+  --ok-soft: rgba(29, 134, 86, 0.12);
+  --err: #c0392b;
+  --err-soft: rgba(192, 57, 43, 0.10);
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11151a; --grid: rgba(124, 156, 255, 0.06); --surface: #191f27; --ink: #e5eaef;
+    --muted: #93a0ad; --line: #2b333d; --accent: #8aa6ff; --accent-soft: rgba(138, 166, 255, 0.14);
+    --ok: #4cc38a; --ok-soft: rgba(76, 195, 138, 0.14); --err: #ff7f70; --err-soft: rgba(255, 127, 112, 0.13);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #11151a; --grid: rgba(124, 156, 255, 0.06); --surface: #191f27; --ink: #e5eaef;
+  --muted: #93a0ad; --line: #2b333d; --accent: #8aa6ff; --accent-soft: rgba(138, 166, 255, 0.14);
+  --ok: #4cc38a; --ok-soft: rgba(76, 195, 138, 0.14); --err: #ff7f70; --err-soft: rgba(255, 127, 112, 0.13);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+
+header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.9rem; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+h1 span { color: var(--accent); }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; }
+.eyebrow { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Configuração ---------- */
+.ops { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.op { border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 12px; transition: opacity .15s, border-color .15s; }
+.op.off { opacity: 0.5; }
+.op.on { border-color: var(--accent); }
+.op-title { display: flex; align-items: center; gap: 10px; font-weight: 600; cursor: pointer; }
+.op-sym { font-family: var(--font-num); font-size: 1.3rem; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.op-title input { margin-left: auto; width: 18px; height: 18px; accent-color: var(--accent); }
+.ranges { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 8px; align-items: center; }
+.ranges .lbl { font-size: 0.8rem; color: var(--muted); }
+.ranges .colhead { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.hint { font-size: 0.8rem; color: var(--muted); margin: 0; }
+.extra { display: grid; grid-template-columns: auto 1fr; gap: 6px 8px; align-items: center; padding-top: 10px; border-top: 1px dashed var(--line); }
+select {
+  font-family: var(--font-body); font-size: 1rem; width: 100%; min-width: 0; padding: 6px 8px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--ink);
+}
+
+input[type="number"], input[type="text"] {
+  font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 1rem; /* 16 px: evita o zoom automático do iPhone */
+  width: 100%; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--paper); color: var(--ink);
+}
+input:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.row-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.seg { display: flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; width: fit-content; max-width: 100%; }
+.seg label { cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: block; padding: 7px 12px; font-size: 0.88rem; border-right: 1px solid var(--line); }
+.seg label:last-child span { border-right: 0; }
+.seg input:checked + span { background: var(--accent); color: var(--surface); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+.inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inline input[type="number"] { width: 90px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+button { font-family: var(--font-body); font-size: 0.95rem; font-weight: 600; border-radius: 8px; padding: 10px 18px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+button.primary:hover { filter: brightness(1.08); }
+button.danger { color: var(--err); }
+button.danger:hover { border-color: var(--err); }
+button.small { padding: 6px 12px; font-size: 0.85rem; }
+.error-msg { color: var(--err); font-size: 0.88rem; margin: 0; }
+
+/* ---------- Partida ---------- */
+.scorebar { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+.chip { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; display: flex; flex-direction: column; min-width: 84px; }
+.chip b { font-family: var(--font-num); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.chip.ok b { color: var(--ok); }
+.chip.err b { color: var(--err); }
+.chip.score b { color: var(--accent); }
+.scorebar .spacer { flex: 1; }
+
+.game { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .game { grid-template-columns: 1fr; } }
+
+.board { align-items: center; text-align: center; padding-block: 32px; container-type: inline-size; }
+.question { font-family: var(--font-num); font-weight: 700; font-size: clamp(2.4rem, 9vw, 4rem); letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.question .eq { color: var(--muted); font-weight: 400; }
+.answer-row { display: flex; gap: 8px; width: 100%; max-width: 360px; }
+.answer-row input { font-size: 1.6rem; text-align: center; padding: 10px; background: var(--paper); }
+.answer-row .sign { padding: 10px 14px; font-family: var(--font-num); }
+.feedback { min-height: 2.2em; font-family: var(--font-num); font-size: 0.95rem; padding: 6px 12px; border-radius: 6px; }
+.feedback.ok { background: var(--ok-soft); color: var(--ok); }
+.feedback.err { background: var(--err-soft); color: var(--err); }
+.timer { font-family: var(--font-num); color: var(--muted); font-size: 0.85rem; }
+
+.raffle-list { display: flex; flex-direction: column; gap: 8px; }
+.cand { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.cand.chosen { border-color: var(--accent); background: var(--accent-soft); }
+.cand .q { font-family: var(--font-num); font-weight: 600; }
+.cand .meta { font-size: 0.78rem; color: var(--muted); text-align: right; }
+.cand .bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.cand .bar i { display: block; height: 100%; background: var(--muted); border-radius: 3px; }
+.cand.chosen .bar i { background: var(--accent); }
+.tag { display: inline-block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: 2px; font-family: var(--font-body); }
+.tag.nova { background: var(--accent-soft); color: var(--accent); }
+.tag.vista { background: var(--line); color: var(--muted); }
+.tag.recente { background: var(--err-soft); color: var(--err); }
+.tag.sorteada { background: var(--accent); color: var(--surface); }
+.recent { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 0.8rem; color: var(--muted); }
+.recent code { font-family: var(--font-num); background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--ink); }
+
+/* ---------- Caderno ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 7px 8px; border-bottom: 1px solid var(--line); font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.r, th.r { text-align: right; }
+.note-cell { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+.note-cell .mini { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.note-cell .mini i { display: block; height: 100%; background: var(--err); }
+.empty { color: var(--muted); font-size: 0.9rem; margin: 0; }
+
+/* ---------- Fim ---------- */
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.summary .chip { min-width: 0; }
+.misses { display: flex; flex-wrap: wrap; gap: 6px; }
+.misses code { font-family: var(--font-num); background: var(--err-soft); color: var(--err); border-radius: 4px; padding: 2px 8px; }
+
+/* ---------- Celular ---------- */
+button, .seg label, .op-title { touch-action: manipulation; }
+.cand .q { min-width: 0; }
+
+@media (max-width: 600px) {
+  body { padding-block: 16px 32px; }
+  .wrap { gap: 16px; }
+  h1 { font-size: 1.5rem; }
+  .panel { padding: 16px; gap: 14px; }
+
+  /* Durante a partida o título some para a conta e o teclado caberem juntos */
+  body.in-game header.top { display: none; }
+
+  /* Placar em 4 colunas iguais, botão de encerrar na linha de baixo */
+  .scorebar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .scorebar .spacer { display: none; }
+  .scorebar .chip { min-width: 0; padding: 6px 8px; }
+  .scorebar .chip .eyebrow { font-size: 0.62rem; letter-spacing: 0.04em; }
+  .scorebar .chip b { font-size: 1rem; }
+  #btn-stop { grid-column: 1 / -1; padding: 8px; }
+
+  .board { padding-block: 20px; gap: 12px; }
+  .answer-row { max-width: none; }
+  .answer-row button { min-width: 52px; }
+
+  /* Alvos de toque com pelo menos 44 px */
+  button { min-height: 44px; }
+  button.small { min-height: 40px; }
+  .seg span { padding: 10px 12px; }
+  .op-title input { width: 22px; height: 22px; }
+  input[type="number"], select { padding: 9px 8px; }
+
+  .actions .primary { flex: 1 1 100%; }
+  .row-settings { gap: 20px; }
+
+  .cand { padding: 8px 10px; }
+  .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+body { margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Caderno de <span>Contas</span></h1>
+      <p class="sub">Treino de contas que sorteia com mais frequência o que você ainda erra ou demora.</p>
+    </div>
+  </header>
+
+  <!-- ================= CONFIGURAÇÃO ================= -->
+  <section id="screen-setup" class="wrap" style="gap:16px">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Operações</h2>
+        <span class="eyebrow">settings.operator</span>
+      </div>
+      <div class="ops" id="ops"></div>
+      <p class="hint">Cada número fica sempre dentro do seu range, mesmo com a ordem ligada. Na divisão, a esquerda é o dividendo e a direita é o divisor. Com “Só inteiro”, entram apenas divisões exatas; com casas no resultado, qualquer divisão vale e a resposta é arredondada.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Partida</h2></div>
+      <div class="row-settings">
+        <div class="field">
+          <span class="eyebrow">Ordem dos números</span>
+          <div class="seg" role="radiogroup" aria-label="Ordem dos números">
+            <label><input type="radio" name="order" id="order-none" value="none" checked><span>Qualquer</span></label>
+            <label><input type="radio" name="order" id="order-gt" value=">"><span>Esq. ≥ dir.</span></label>
+            <label><input type="radio" name="order" id="order-lt" value="<"><span>Esq. ≤ dir.</span></label>
+          </div>
+          <p class="hint">“Esq. ≥ dir.” evita resultado negativo na subtração.</p>
+        </div>
+        <div class="field">
+          <span class="eyebrow">Duração (roundLength)</span>
+          <div class="seg" role="radiogroup" aria-label="Duração">
+            <label><input type="radio" name="length" id="length-free" value="free"><span>Até eu parar</span></label>
+            <label><input type="radio" name="length" id="length-fixed" value="fixed" checked><span>Fixa</span></label>
+          </div>
+          <div class="inline" id="length-box">
+            <input type="number" id="length-n" min="1" max="500" value="20" aria-label="Quantidade de contas">
+            <span class="hint">contas</span>
+          </div>
+        </div>
+        <div class="field">
+          <span class="eyebrow">Foco nas difíceis: <b class="num" id="k-val">4</b> candidatas</span>
+          <input type="range" id="k" min="1" max="10" value="4" aria-label="Quantidade de candidatas por sorteio">
+          <p class="hint">1 = sorteio comum. Quanto maior, mais o app insiste no que você erra.</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="btn-start">Começar partida</button>
+        <p class="error-msg" id="setup-error" hidden></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h2>O caderninho</h2>
+        <div class="actions" id="reset-box"></div>
+      </div>
+      <p class="hint">Tudo o que você já respondeu, ordenado da conta mais difícil para a mais fácil. Fica salvo neste navegador.</p>
+      <div id="notebook-setup"></div>
+    </div>
+  </section>
+
+  <!-- ================= PARTIDA ================= -->
+  <section id="screen-game" class="wrap" style="gap:16px" hidden>
+    <div class="scorebar">
+      <div class="chip"><span class="eyebrow">Conta</span><b id="s-progress">1</b></div>
+      <div class="chip ok"><span class="eyebrow">Acertos</span><b id="s-rights">0</b></div>
+      <div class="chip err"><span class="eyebrow">Erros</span><b id="s-wrongs">0</b></div>
+      <div class="chip score"><span class="eyebrow">Pontos</span><b id="s-score">0</b></div>
+      <div class="spacer"></div>
+      <button id="btn-stop">Encerrar partida</button>
+    </div>
+
+    <div class="game">
+      <div class="panel board">
+        <span class="eyebrow" id="q-label">Quanto é</span>
+        <div class="question" id="question">7 × 8 <span class="eq">=</span> ?</div>
+        <form class="answer-row" id="answer-form" autocomplete="off">
+          <button type="button" class="sign" id="btn-sign" title="Trocar sinal" aria-label="Trocar sinal">±</button>
+          <input type="text" id="answer" inputmode="decimal" enterkeyhint="send" autocorrect="off" spellcheck="false" aria-label="Sua resposta" placeholder="?">
+          <button type="submit" class="primary">OK</button>
+        </form>
+        <div class="timer" id="timer">0,0 s</div>
+        <div class="feedback" id="feedback">Digite a resposta e aperte Enter.</div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Como esta conta foi sorteada</h2>
+        </div>
+        <p class="hint" id="raffle-intro"></p>
+        <div class="raffle-list" id="raffle"></div>
+        <div class="recent" id="recent"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FIM ================= -->
+  <section id="screen-end" class="wrap" style="gap:16px" hidden>
+    <div class="panel">
+      <div class="panel-head"><h2>Fim da partida</h2></div>
+      <div class="summary" id="summary"></div>
+      <div id="misses-box"></div>
+      <div class="actions">
+        <button class="primary" id="btn-again">Jogar de novo</button>
+        <button id="btn-config">Mudar configurações</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>O caderninho</h2></div>
+      <div id="notebook-end"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+// ============================================================
+// Constantes (as mesmas do pseudocódigo)
+// ============================================================
+const FAST_MS = 2000;      // até 2 s: resposta "no automático"
+const SLOW_MS = 8000;      // 8 s ou mais: resposta lenta
+const NEVER_SEEN = 5.0;    // nota de quem nunca apareceu
+const JUST_SEEN = 0.1;     // nota de quem acabou de aparecer
+const RECENT_SIZE = 3;     // quantas contas ficam na lista de recentes
+
+const OPS = {
+  sum:            { label: 'Soma',          sym: '+', calc: (a, b) => a + b },
+  subtraction:    { label: 'Subtração',     sym: '−', calc: (a, b) => a - b },
+  multiplication: { label: 'Multiplicação', sym: '×', calc: (a, b) => a * b },
+  division:       { label: 'Divisão',       sym: '÷', calc: (a, b) => a / b },
+};
+
+const DEFAULT_SETTINGS = {
+  operator: ['sum', 'multiplication'],
+  order: 'none',
+  roundLength: 20,          // null = até o usuário parar
+  candidates: 4,
+  sum:            { leftInitial: 0, leftFinal: 10, rightInitial: 0, rightFinal: 10, decimals: 0 },
+  subtraction:    { leftInitial: 0, leftFinal: 20, rightInitial: 0, rightFinal: 10, decimals: 0 },
+  multiplication: { leftInitial: 1, leftFinal: 10, rightInitial: 1, rightFinal: 10, decimals: 0 },
+  division:       { leftInitial: 1, leftFinal: 100, rightInitial: 1, rightFinal: 10, decimals: 0, resultDecimals: 0 },
+};
+// decimals: casas decimais dos números sorteados (0 a 3)
+// resultDecimals (só divisão): 0 = só contas com resultado inteiro; 1 a 3 = qualquer divisão, resposta arredondada
+
+// ============================================================
+// Persistência (localStorage, com proteção)
+// ============================================================
+function load(key, fallback) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch (e) { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+}
+
+let settings = Object.assign(structuredClone(DEFAULT_SETTINGS), load('cc.settings', {}));
+let stats = load('cc.stats', {});       // o caderninho: { "sum:7:8": { attempts, wrongs, avgMs } }
+let recent = [];
+let round = null;
+let current = null;
+let timerId = null;
+
+// ============================================================
+// Sorteio
+// ============================================================
+function randInt(min, max) {
+  if (min > max) [min, max] = [max, min];
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function makeKey(q) { return q.op + ':' + q.a + ':' + q.b; }
+
+// Range sempre em ordem crescente: [menor, maior]
+function bounds(lo, hi) { return lo <= hi ? [lo, hi] : [hi, lo]; }
+
+const BIG = 200000;   // acima disso, não percorre o range inteiro
+
+// Limites da esquerda para que exista pelo menos uma direita válida
+//   '<' (esq ≤ dir): a esquerda não pode passar do maior número da direita
+//   '>' (esq ≥ dir): a esquerda não pode ficar abaixo do menor número da direita
+function leftLimits(r, order) {
+  const [L1, L2] = bounds(r.leftInitial, r.leftFinal);
+  const [R1, R2] = bounds(r.rightInitial, r.rightFinal);
+  if (order === '<') return [L1, Math.min(L2, R2)];
+  if (order === '>') return [Math.max(L1, R1), L2];
+  return [L1, L2];
+}
+
+// Limites da direita depois que a esquerda já foi sorteada
+function rightLimits(r, order, a) {
+  const [R1, R2] = bounds(r.rightInitial, r.rightFinal);
+  if (order === '<') return [Math.max(R1, a), R2];
+  if (order === '>') return [R1, Math.min(R2, a)];
+  return [R1, R2];
+}
+
+// Divisão: para cada divisor possível, quais múltiplos dele cabem no range da esquerda
+//   resultado: [{ b, m, kMin, kMax }]  ->  dividendo = k * m, com k entre kMin e kMax
+function divisionOptions(r, order, b) {
+  const [L1, L2] = bounds(r.leftInitial, r.leftFinal);
+  if (b === 0) return null;
+  let lo = L1, hi = L2;
+  if (order === '<') hi = Math.min(hi, b);   // dividendo ≤ divisor
+  if (order === '>') lo = Math.max(lo, b);   // dividendo ≥ divisor
+  const m = Math.abs(b);
+  const kMin = Math.ceil(lo / m), kMax = Math.floor(hi / m);
+  return kMin <= kMax ? { b, m, kMin, kMax } : null;
+}
+
+const divCache = {};
+function divisionList(r, order) {
+  const id = [r.leftInitial, r.leftFinal, r.rightInitial, r.rightFinal, order].join('|');
+  if (divCache[id]) return divCache[id];
+  const [R1, R2] = bounds(r.rightInitial, r.rightFinal);
+  if (R2 - R1 > BIG) return null;            // range enorme: sorteia sem lista
+  const list = [];
+  for (let b = R1; b <= R2; b++) {
+    const opt = divisionOptions(r, order, b);
+    if (opt) list.push(opt);
+  }
+  return (divCache[id] = list);
+}
+
+// Casas decimais: em vez de sortear 2,5, sorteia o inteiro 25 num range multiplicado por 10
+// e divide no final. Assim toda a lógica de ordem e de range continua trabalhando com inteiros.
+//   range 0 a 10 com 1 casa  ->  range 0 a 100  ->  sorteia 37  ->  3,7
+function scaled(r) {
+  const f = 10 ** (r.decimals || 0);
+  return {
+    leftInitial:  Math.round(r.leftInitial * f),
+    leftFinal:    Math.round(r.leftFinal * f),
+    rightInitial: Math.round(r.rightInitial * f),
+    rightFinal:   Math.round(r.rightFinal * f),
+  };
+}
+
+// Sorteio genérico: esquerda limitada pela ordem, depois direita a partir da esquerda
+function randomPair(rs, order, avoidZeroB) {
+  for (let i = 0; i < 200; i++) {
+    const [aLo, aHi] = leftLimits(rs, order);
+    const a = randInt(aLo, aHi);
+    const [bLo, bHi] = rightLimits(rs, order, a);
+    const b = randInt(bLo, bHi);
+    if (!(avoidZeroB && b === 0)) return [a, b];
+  }
+  return [1, 1];   // segurança: não achou nenhuma combinação
+}
+
+// O sorteio "normal", sem peso nenhum. Cada lado fica sempre dentro do próprio range.
+function randomQuestion(s) {
+  const op = s.operator[Math.floor(Math.random() * s.operator.length)];
+  const r = s[op];
+  const f = 10 ** (r.decimals || 0);
+  const rs = scaled(r);
+
+  if (op === 'division') {
+    const rd = r.resultDecimals || 0;
+
+    if (rd > 0) {
+      // Resultado com casas: qualquer divisão vale, só não pode dividir por zero
+      const [a, b] = randomPair(rs, s.order, true);
+      return { op, a: a / f, b: b / f, rd };
+    }
+
+    // Resultado inteiro: dividendo no range da esquerda, divisor no range da direita
+    let opt = null;
+    const list = divisionList(rs, s.order);
+    if (list) {
+      opt = list[Math.floor(Math.random() * list.length)];
+    } else {
+      for (let i = 0; i < 500 && !opt; i++) opt = divisionOptions(rs, s.order, randInt(rs.rightInitial, rs.rightFinal));
+    }
+    if (!opt) opt = { b: 1, m: 1, kMin: 1, kMax: 1 };
+    const k = randInt(opt.kMin, opt.kMax);
+    return { op, a: (k * opt.m) / f, b: opt.b / f, rd: 0 };
+  }
+
+  const [a, b] = randomPair(rs, s.order, false);
+  return { op, a: a / f, b: b / f };
+}
+
+// Resposta certa de uma conta (arredondada quando a divisão pede casas)
+function answerOf(q) {
+  const exact = OPS[q.op].calc(q.a, q.b);
+  if (q.rd > 0) return Math.round(exact * 10 ** q.rd) / 10 ** q.rd;
+  return Math.round(exact * 1e9) / 1e9;   // limpa sujeira de ponto flutuante (0,1 + 0,2)
+}
+
+// Na divisão com casas, aceita o valor arredondado certo (ou o valor exato, se a pessoa digitar mais casas)
+function isCorrect(q, given) {
+  const exact = OPS[q.op].calc(q.a, q.b);
+  if (Math.abs(given - exact) < 1e-9) return true;
+  if (q.rd > 0) {
+    const f = 10 ** q.rd;
+    return Math.abs(Math.round(given * f) / f - answerOf(q)) < 1e-9;
+  }
+  return false;
+}
+
+// Quantas contas diferentes existem com essa configuração (null = grande demais para contar)
+function countPairs(op, r, order) {
+  const rs = scaled(r);
+  const division = op === 'division';
+
+  if (division && !(r.resultDecimals > 0)) {
+    const list = divisionList(rs, order);
+    if (!list) return null;
+    return list.reduce((s, o) => s + (o.kMax - o.kMin + 1), 0);
+  }
+
+  const [aLo, aHi] = leftLimits(rs, order);
+  if (aLo > aHi) return 0;
+  if (aHi - aLo > BIG) return null;
+  let total = 0;
+  for (let a = aLo; a <= aHi; a++) {
+    const [bLo, bHi] = rightLimits(rs, order, a);
+    if (bHi < bLo) continue;
+    total += bHi - bLo + 1;
+    if (division && bLo <= 0 && bHi >= 0) total -= 1;   // tira a divisão por zero
+  }
+  return total;
+}
+
+// PASSO 2: nota de dificuldade (1 a 10)
+function difficulty(stat) {
+  if (!stat) return NEVER_SEEN;
+  const errorRate = (stat.wrongs + 1) / (stat.attempts + 2);
+  let slowness = (stat.avgMs - FAST_MS) / (SLOW_MS - FAST_MS);
+  slowness = Math.min(1, Math.max(0, slowness));
+  return 1 + 6 * errorRate + 3 * slowness;
+}
+
+// PASSO 3: sorteia k candidatas e faz a rifa
+function nextQuestion() {
+  const cands = [];
+  for (let i = 0; i < settings.candidates; i++) {
+    const q = randomQuestion(settings);
+    const key = makeKey(q);
+    let note, tag;
+    if (recent.includes(key)) { note = JUST_SEEN; tag = 'recente'; }
+    else if (stats[key])      { note = difficulty(stats[key]); tag = 'vista'; }
+    else                      { note = NEVER_SEEN; tag = 'nova'; }
+    cands.push({ q, key, note, tag });
+  }
+
+  const total = cands.reduce((s, c) => s + c.note, 0);
+  let drawn = Math.random() * total;
+  let chosen = cands.length - 1;
+  for (let i = 0; i < cands.length; i++) {
+    drawn -= cands[i].note;
+    if (drawn <= 0) { chosen = i; break; }
+  }
+  return { cands, total, chosen };
+}
+
+// PASSO 4: atualiza o caderno
+function record(q, correct, ms) {
+  const key = makeKey(q);
+  const s = stats[key] || { attempts: 0, wrongs: 0, avgMs: ms };
+  s.attempts += 1;
+  if (!correct) s.wrongs += 1;
+  s.avgMs = s.avgMs * 0.7 + ms * 0.3;
+  stats[key] = s;
+  save('cc.stats', stats);
+}
+
+// ============================================================
+// Formatação
+// ============================================================
+const fmtNum = n => String(n).replace('.', ',').replace('-', '−');
+const fmtQ = q => `${fmtNum(q.a)} ${OPS[q.op].sym} ${fmtNum(q.b)}`;
+const fmtSec = ms => (ms / 1000).toFixed(1).replace('.', ',') + ' s';
+const fmtNote = n => n.toFixed(1).replace('.', ',');
+const parseKey = key => { const [op, a, b] = key.split(':'); return { op, a: +a, b: +b }; };
+const $ = id => document.getElementById(id);
+
+// ============================================================
+// Tela de configuração
+// ============================================================
+function renderOps() {
+  const box = $('ops');
+  box.innerHTML = '';
+  for (const op of Object.keys(OPS)) {
+    const on = settings.operator.includes(op);
+    const r = settings[op];
+    const isDiv = op === 'division';
+    const el = document.createElement('div');
+    el.className = 'op ' + (on ? 'on' : 'off');
+    el.innerHTML = `
+      <label class="op-title" for="op-${op}">
+        <span class="op-sym">${OPS[op].sym}</span>${OPS[op].label}
+        <input type="checkbox" id="op-${op}" ${on ? 'checked' : ''}>
+      </label>
+      <div class="ranges">
+        <span></span><span class="colhead">de</span><span class="colhead">até</span>
+        <span class="lbl">${isDiv ? 'Dividendo' : 'Esquerda'}</span>
+        <input type="number" step="any" id="${op}-leftInitial" value="${r.leftInitial}" aria-label="${OPS[op].label}: esquerda, de">
+        <input type="number" step="any" id="${op}-leftFinal" value="${r.leftFinal}" aria-label="${OPS[op].label}: esquerda, até">
+        <span class="lbl">${isDiv ? 'Divisor' : 'Direita'}</span>
+        <input type="number" step="any" id="${op}-rightInitial" value="${r.rightInitial}" aria-label="${OPS[op].label}: direita, de">
+        <input type="number" step="any" id="${op}-rightFinal" value="${r.rightFinal}" aria-label="${OPS[op].label}: direita, até">
+      </div>
+      <div class="extra">
+        <label class="lbl" for="${op}-decimals">Casas decimais</label>
+        <select id="${op}-decimals">${[0, 1, 2, 3].map(n => `<option value="${n}" ${(r.decimals || 0) === n ? 'selected' : ''}>${n === 0 ? 'Nenhuma' : n}</option>`).join('')}</select>
+        ${isDiv ? `
+        <label class="lbl" for="division-resultDecimals">Resultado</label>
+        <select id="division-resultDecimals">${[0, 1, 2, 3].map(n => `<option value="${n}" ${(r.resultDecimals || 0) === n ? 'selected' : ''}>${n === 0 ? 'Só inteiro' : `${n} ${n === 1 ? 'casa' : 'casas'} (arredondado)`}</option>`).join('')}</select>` : ''}
+      </div>
+      <p class="hint count" id="${op}-count"></p>`;
+    el.querySelector('input[type=checkbox]').addEventListener('change', e => {
+      el.className = 'op ' + (e.target.checked ? 'on' : 'off');
+    });
+    box.appendChild(el);
+  }
+  updateCounts();
+}
+
+// Lê os campos de uma operação do formulário (null se algum número estiver vazio)
+function readOp(op) {
+  const r = {};
+  for (const f of ['leftInitial', 'leftFinal', 'rightInitial', 'rightFinal']) {
+    const v = parseFloat($(op + '-' + f).value);
+    if (Number.isNaN(v)) return null;
+    r[f] = v;
+  }
+  r.decimals = parseInt($(op + '-decimals').value, 10);
+  if (op === 'division') r.resultDecimals = parseInt($('division-resultDecimals').value, 10);
+  return r;
+}
+
+// Mostra, em cada operação, quantas contas diferentes a configuração permite
+function updateCounts() {
+  const checked = document.querySelector('input[name=order]:checked');
+  const order = checked ? checked.value : 'none';
+  for (const op of Object.keys(OPS)) {
+    const r = readOp(op);
+    const el = $(op + '-count');
+    if (!r) { el.textContent = ''; continue; }
+    const n = countPairs(op, r, order);
+    el.style.color = n === 0 ? 'var(--err)' : '';
+    el.textContent = n === null ? 'Muitas contas possíveis.'
+      : n === 0 ? 'Nenhuma conta possível com esses ranges e essa ordem.'
+      : `${n.toLocaleString('pt-BR')} ${n === 1 ? 'conta possível' : 'contas possíveis'}.`;
+  }
+}
+
+$('ops').addEventListener('input', e => { if (e.target.type === 'number') updateCounts(); });
+$('ops').addEventListener('change', e => { if (e.target.tagName === 'SELECT') updateCounts(); });
+document.querySelectorAll('input[name=order]').forEach(r => r.addEventListener('change', updateCounts));
+
+function fillSetupForm() {
+  renderOps();
+  $('order-' + ({ none: 'none', '>': 'gt', '<': 'lt' }[settings.order])).checked = true;
+  if (settings.roundLength == null) $('length-free').checked = true;
+  else { $('length-fixed').checked = true; $('length-n').value = settings.roundLength; }
+  $('length-box').hidden = settings.roundLength == null;
+  $('k').value = settings.candidates;
+  $('k-val').textContent = settings.candidates;
+  updateCounts();
+}
+
+function readSetupForm() {
+  const s = structuredClone(settings);
+  s.operator = Object.keys(OPS).filter(op => $('op-' + op).checked);
+  if (!s.operator.length) return { error: 'Escolha pelo menos uma operação.' };
+  for (const op of Object.keys(OPS)) {
+    const r = readOp(op);
+    if (!r) return { error: `Preencha todos os números de ${OPS[op].label}.` };
+    s[op] = r;
+  }
+  s.order = document.querySelector('input[name=order]:checked').value;
+  if ($('length-free').checked) s.roundLength = null;
+  else {
+    const n = parseInt($('length-n').value, 10);
+    if (!(n >= 1)) return { error: 'A duração precisa ser de pelo menos 1 conta.' };
+    s.roundLength = n;
+  }
+  s.candidates = parseInt($('k').value, 10);
+  for (const op of s.operator) {
+    if (countPairs(op, s[op], s.order) === 0) {
+      return { error: `${OPS[op].label}: nenhuma conta possível com esses ranges e essa ordem.` };
+    }
+  }
+  return { settings: s };
+}
+
+document.querySelectorAll('input[name=length]').forEach(r =>
+  r.addEventListener('change', () => { $('length-box').hidden = $('length-free').checked; }));
+$('k').addEventListener('input', e => { $('k-val').textContent = e.target.value; });
+
+// ============================================================
+// Caderninho (tabela)
+// ============================================================
+function renderNotebook(target) {
+  const rows = Object.entries(stats)
+    .map(([key, s]) => ({ key, s, note: difficulty(s) }))
+    .sort((x, y) => y.note - x.note)
+    .slice(0, 40);
+
+  if (!rows.length) {
+    target.innerHTML = '<p class="empty">Ainda vazio. Cada conta respondida aparece aqui com tentativas, erros, tempo médio e nota.</p>';
+    return;
+  }
+  const total = Object.keys(stats).length;
+  target.innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Conta</th><th class="r">Tentativas</th><th class="r">Erros</th><th class="r">Tempo médio</th><th>Nota (1–10)</th></tr></thead>
+      <tbody>${rows.map(({ key, s, note }) => `
+        <tr>
+          <td>${fmtQ(parseKey(key))}</td>
+          <td class="r">${s.attempts}</td>
+          <td class="r">${s.wrongs}</td>
+          <td class="r">${fmtSec(s.avgMs)}</td>
+          <td><div class="note-cell"><span>${fmtNote(note)}</span><span class="mini"><i style="width:${(note - 1) / 9 * 100}%"></i></span></div></td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+    ${total > rows.length ? `<p class="hint">Mostrando as 40 mais difíceis de ${total}.</p>` : ''}`;
+}
+
+function renderReset(confirming) {
+  const box = $('reset-box');
+  if (!Object.keys(stats).length) { box.innerHTML = ''; return; }
+  if (!confirming) {
+    box.innerHTML = '<button class="small danger" id="btn-reset">Apagar caderno</button>';
+    $('btn-reset').onclick = () => renderReset(true);
+  } else {
+    box.innerHTML = '<span class="hint">Apagar todo o histórico?</span><button class="small danger" id="btn-reset-yes">Apagar</button><button class="small" id="btn-reset-no">Cancelar</button>';
+    $('btn-reset-yes').onclick = () => { stats = {}; save('cc.stats', stats); renderNotebook($('notebook-setup')); renderReset(false); };
+    $('btn-reset-no').onclick = () => renderReset(false);
+  }
+}
+
+// ============================================================
+// Partida
+// ============================================================
+function show(screen) {
+  for (const s of ['setup', 'game', 'end']) $('screen-' + s).hidden = s !== screen;
+  document.body.classList.toggle('in-game', screen === 'game');
+  window.scrollTo(0, 0);
+}
+
+function startRound() {
+  round = { rights: 0, wrongs: 0, score: 0, roundSettings: structuredClone(settings), history: [] };
+  recent = [];
+  $('feedback').className = 'feedback';
+  $('feedback').textContent = 'Digite a resposta e aperte Enter.';
+  show('game');
+  updateScorebar();
+  askNext();
+}
+
+function askNext() {
+  const raffle = nextQuestion();
+  const c = raffle.cands[raffle.chosen];
+  current = { q: c.q, key: c.key, note: c.note, raffle, startedAt: performance.now() };
+
+  $('question').innerHTML = `${fmtQ(c.q)} <span class="eq">=</span> ?`;
+  // Encolhe a fonte para a conta inteira caber na largura do quadro (cada caractere mono ≈ 0,62 em)
+  const chars = (fmtQ(c.q) + ' = ?').length;
+  $('question').style.fontSize = `min(4rem, calc(92cqi / ${(chars * 0.62).toFixed(2)}))`;
+  $('q-label').textContent = c.q.rd > 0
+    ? `Quanto é (arredonde para ${c.q.rd} ${c.q.rd === 1 ? 'casa' : 'casas'})`
+    : 'Quanto é';
+  $('answer').value = '';
+  $('answer').focus({ preventScroll: true });
+  renderRaffle(raffle);
+  renderRecent();
+  clearInterval(timerId);
+  timerId = setInterval(() => { $('timer').textContent = fmtSec(performance.now() - current.startedAt); }, 100);
+  $('timer').textContent = '0,0 s';
+}
+
+function renderRaffle({ cands, total, chosen }) {
+  const n = cands.length;
+  $('raffle-intro').textContent = n === 1
+    ? 'Com 1 candidata, o sorteio é comum: não há rifa.'
+    : `O app sorteou ${n} contas ao acaso. Cada nota virou bilhetes de rifa (${fmtNote(total)} no total) e um bilhete foi tirado.`;
+  $('raffle').innerHTML = cands.map((c, i) => {
+    const pct = c.note / total * 100;
+    const label = { nova: 'nunca vista', vista: 'já vista', recente: 'acabou de sair' }[c.tag];
+    return `<div class="cand ${i === chosen ? 'chosen' : ''}">
+      <span class="q">${fmtQ(c.q)}<span class="tag ${c.tag}">${label}</span>${i === chosen ? '<span class="tag sorteada">sorteada</span>' : ''}</span>
+      <span class="meta num">nota ${fmtNote(c.note)} · ${pct.toFixed(0)}%</span>
+      <span class="bar"><i style="width:${pct}%"></i></span>
+    </div>`;
+  }).join('');
+}
+
+function renderRecent() {
+  $('recent').innerHTML = recent.length
+    ? 'Recentes (quase sem bilhetes): ' + recent.map(k => `<code>${fmtQ(parseKey(k))}</code>`).join('')
+    : '';
+}
+
+function updateScorebar() {
+  const done = round.rights + round.wrongs;
+  const len = round.roundSettings.roundLength;
+  $('s-progress').textContent = len ? `${Math.min(done + 1, len)}/${len}` : String(done + 1);
+  $('s-rights').textContent = round.rights;
+  $('s-wrongs').textContent = round.wrongs;
+  $('s-score').textContent = round.score;
+}
+
+$('btn-sign').addEventListener('click', () => {
+  const inp = $('answer');
+  inp.value = inp.value.startsWith('-') ? inp.value.slice(1) : '-' + inp.value;
+  inp.focus();
+});
+
+$('answer-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const raw = $('answer').value.trim().replace(',', '.').replace('−', '-');
+  if (raw === '' || raw === '-' || Number.isNaN(Number(raw))) { $('answer').focus(); return; }
+
+  const ms = performance.now() - current.startedAt;
+  const q = current.q;
+  const answer = answerOf(q);
+  const correct = isCorrect(q, Number(raw));
+  const points = Math.max(1, Math.round(current.note));
+
+  record(q, correct, ms);
+  round.history.push({ q, correct, ms, given: Number(raw) });
+  if (correct) { round.rights += 1; round.score += points; }
+  else round.wrongs += 1;
+
+  recent.push(current.key);
+  if (recent.length > RECENT_SIZE) recent.shift();
+
+  const fb = $('feedback');
+  fb.className = 'feedback ' + (correct ? 'ok' : 'err');
+  fb.textContent = correct
+    ? `✓ ${fmtQ(q)} = ${fmtNum(answer)} · ${fmtSec(ms)} · +${points} pts`
+    : `✗ ${fmtQ(q)} = ${fmtNum(answer)} (você: ${fmtNum(Number(raw))}) · ${fmtSec(ms)}`;
+
+  const len = round.roundSettings.roundLength;
+  if (len && round.rights + round.wrongs >= len) { endRound(); return; }
+  updateScorebar();
+  askNext();
+});
+
+function endRound() {
+  clearInterval(timerId);
+  const done = round.rights + round.wrongs;
+  const avg = done ? round.history.reduce((s, h) => s + h.ms, 0) / done : 0;
+  const acc = done ? Math.round(round.rights / done * 100) : 0;
+  $('summary').innerHTML = `
+    <div class="chip"><span class="eyebrow">Contas</span><b>${done}</b></div>
+    <div class="chip ok"><span class="eyebrow">Acertos</span><b>${round.rights}</b></div>
+    <div class="chip err"><span class="eyebrow">Erros</span><b>${round.wrongs}</b></div>
+    <div class="chip"><span class="eyebrow">Aproveitamento</span><b>${acc}%</b></div>
+    <div class="chip"><span class="eyebrow">Tempo médio</span><b>${fmtSec(avg)}</b></div>
+    <div class="chip score"><span class="eyebrow">Pontos</span><b>${round.score}</b></div>`;
+  const misses = round.history.filter(h => !h.correct);
+  $('misses-box').innerHTML = misses.length
+    ? `<div class="field"><span class="eyebrow">Para treinar mais</span><div class="misses">${misses.map(h => `<code>${fmtQ(h.q)} = ${fmtNum(answerOf(h.q))}</code>`).join('')}</div></div>`
+    : (done ? '<p class="hint">Nenhum erro nesta partida.</p>' : '');
+  renderNotebook($('notebook-end'));
+  show('end');
+}
+
+$('btn-stop').addEventListener('click', endRound);
+
+$('btn-start').addEventListener('click', () => {
+  const res = readSetupForm();
+  if (res.error) { $('setup-error').textContent = res.error; $('setup-error').hidden = false; return; }
+  $('setup-error').hidden = true;
+  settings = res.settings;
+  save('cc.settings', settings);
+  startRound();
+});
+$('btn-again').addEventListener('click', startRound);
+$('btn-config').addEventListener('click', () => {
+  fillSetupForm();
+  renderNotebook($('notebook-setup'));
+  renderReset(false);
+  show('setup');
+});
+
+// Início
+fillSetupForm();
+renderNotebook($('notebook-setup'));
+renderReset(false);
+</script>
+</body>
+</html>
