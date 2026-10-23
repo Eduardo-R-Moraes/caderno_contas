@@ -6,6 +6,7 @@ import { RECENT_SIZE } from '../lib/config';
 import { answerOf, isCorrect } from '../lib/questions';
 import { nextQuestion, record } from '../lib/raffle';
 import { fmtNum, fmtQ, fmtSec } from '../lib/format';
+import { play } from '../lib/sounds';
 import type { Question, Raffle, Round, Settings, Stats } from '../lib/types';
 import Timer from './Timer';
 import RafflePanel from './RafflePanel';
@@ -62,6 +63,7 @@ export default function GameScreen({ settings, stats, onStats, onEnd }: Props) {
     const ms = performance.now() - current.startedAt;
     const given = Number(raw);
     const correct = isCorrect(q, given);
+    play(correct ? 'rightAnswer' : 'wrongAnswer');
     const points = Math.max(1, Math.round(current.note));
 
     const nextStats = record(stats, q, correct, ms);
