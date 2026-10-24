@@ -17,12 +17,13 @@ interface Props {
   presets: Preset[];
   onPlay: () => void;
   onRename: (name: string) => void;
+  onEdit: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onBack: () => void;
 }
 
-export default function PresetDetail({ preset, presets, onPlay, onRename, onDuplicate, onDelete, onBack }: Props) {
+export default function PresetDetail({ preset, presets, onPlay, onRename, onEdit, onDuplicate, onDelete, onBack }: Props) {
   const [name, setName] = useState(preset.name);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -38,6 +39,8 @@ export default function PresetDetail({ preset, presets, onPlay, onRename, onDupl
   const best = scores.length ? Math.max(...scores.map(x => x.score)) : null;
   const lastScore = scores.length ? scores[scores.length - 1].score : null;
   const dates = scores.map(x => x.at);
+  // Edição entre duas partidas: marca antes da primeira partida jogada depois dela
+  const breaks = [...new Set((preset.edits ?? []).map(t => scores.findIndex(x => x.at > t)).filter(i => i > 0))];
 
   return (
     <section id="screen-detail" className="wrap" style={{ gap: 16 }}>
@@ -54,15 +57,16 @@ export default function PresetDetail({ preset, presets, onPlay, onRename, onDupl
         </div>
         <div className="actions">
           <button className="primary" id="btn-play" onClick={onPlay}>Jogar</button>
-          <button id="btn-duplicate" onClick={onDuplicate}>Duplicar e editar</button>
+          <button id="btn-duplicate" onClick={onDuplicate}>Duplicar</button>
         </div>
       </div>
 
       <div className="panel">
         <div className="panel-head"><h2>Evolução</h2></div>
-        <ScoreChart title="Pontos por partida" values={scores.map(x => x.score)} dates={dates} fmt={n => fmtNum(Math.round(n))} />
-        <ScoreChart title="Aproveitamento" values={scores.map(x => x.rights / x.done * 100)} dates={dates} fmt={fmtPct} max={100} />
-        <ScoreChart title="Tempo médio por conta" values={scores.map(x => x.avgMs)} dates={dates} fmt={fmtSec} />
+        {breaks.length > 0 && <p className="hint">Linha tracejada: configuração editada.</p>}
+        <ScoreChart title="Pontos por partida" values={scores.map(x => x.score)} dates={dates} fmt={n => fmtNum(Math.round(n))} breaks={breaks} />
+        <ScoreChart title="Aproveitamento" values={scores.map(x => x.rights / x.done * 100)} dates={dates} fmt={fmtPct} max={100} breaks={breaks} />
+        <ScoreChart title="Tempo médio por conta" values={scores.map(x => x.avgMs)} dates={dates} fmt={fmtSec} breaks={breaks} />
         {scores.length > 0 && (
           <details className="score-table">
             <summary>Ver tabela de partidas</summary>
@@ -112,7 +116,10 @@ export default function PresetDetail({ preset, presets, onPlay, onRename, onDupl
         <p className="hint">
           {ORDER_LABEL[s.order]} · {s.roundLength == null ? 'até eu parar' : `${s.roundLength} contas por partida`} · foco nas difíceis: {s.candidates} {s.candidates === 1 ? 'candidata' : 'candidatas'}
         </p>
-        <p className="hint">Para treinar com outros números, use “Duplicar e editar”: a cópia começa com caderninho e evolução zerados.</p>
+        <div className="actions">
+          <button className="small" id="btn-edit" onClick={onEdit}>Editar configurações</button>
+        </div>
+        <p className="hint">Editar mantém o caderninho e a evolução (os gráficos marcam a mudança). “Duplicar” cria uma cópia com tudo zerado.</p>
         <div className="actions" id="delete-box">
           {!confirming
             ? <button className="small danger" id="btn-delete" onClick={() => setConfirming(true)}>Apagar configuração</button>

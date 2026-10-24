@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from './config';
-import { createPreset, deletePreset, describeSettings, finishRound, migrateLegacy, renamePreset, setStats, validateName } from './presets';
+import { createPreset, deletePreset, describeSettings, editPreset, finishRound, migrateLegacy, renamePreset, setStats, validateName } from './presets';
 import type { Preset, Round, Settings } from './types';
 
 const S = (patch: Partial<Settings> = {}): Settings => ({ ...structuredClone(DEFAULT_SETTINGS), ...patch });
@@ -54,6 +54,25 @@ describe('dados por configuração', () => {
     const list = two();
     expect(finishRound(list, list[1].id, round(0, 0, null))[1].scores).toEqual([]);
     expect(finishRound(list, list[1].id, round(2, 0, null))[1].scores).toHaveLength(1);
+  });
+});
+
+describe('editPreset', () => {
+  it('troca nome e settings e mantém caderninho e evolução', () => {
+    let list = two();
+    list = setStats(list, list[0].id, { 'sum:1:2': { attempts: 1, wrongs: 0, avgMs: 1000 } });
+    list = finishRound(list, list[0].id, round(20, 0, 20), 100);
+    const out = editPreset(list, list[0].id, ' A2 ', S({ candidates: 9 }), 200);
+    expect(out[0]).toMatchObject({ name: 'A2', stats: list[0].stats, scores: list[0].scores, edits: [200] });
+    expect(out[0].settings.candidates).toBe(9);
+    expect(out[1]).toBe(list[1]);
+    expect(list[0].settings.candidates).toBe(DEFAULT_SETTINGS.candidates);
+  });
+  it('só registra a edição quando as settings mudam', () => {
+    const list = two();
+    expect(editPreset(list, list[0].id, 'Outro', S(), 200)[0].edits).toBeUndefined();
+    const once = editPreset(list, list[0].id, 'A', S({ order: '>' }), 200);
+    expect(editPreset(once, once[0].id, 'A', S({ order: '<' }), 300)[0].edits).toEqual([200, 300]);
   });
 });
 

@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS } from './lib/config';
 import { load, save } from './lib/storage';
-import { createPreset, deletePreset, duplicateDraftName, finishRound, migrateLegacy, renamePreset, setStats } from './lib/presets';
+import { createPreset, deletePreset, duplicateDraftName, editPreset, finishRound, migrateLegacy, renamePreset, setStats } from './lib/presets';
 import type { Preset, Round, Settings, Stats } from './lib/types';
 import PresetList from './components/PresetList';
 import PresetDetail from './components/PresetDetail';
@@ -12,7 +12,7 @@ import SetupScreen from './components/SetupScreen';
 import GameScreen from './components/GameScreen';
 import EndScreen from './components/EndScreen';
 
-type Screen = 'list' | 'new' | 'detail' | 'game' | 'end';
+type Screen = 'list' | 'new' | 'edit' | 'detail' | 'game' | 'end';
 
 // Na primeira vez, a configuração e o caderninho antigos viram a primeira configuração salva
 function initialPresets(): Preset[] {
@@ -90,6 +90,16 @@ export default function App() {
           onCancel={() => setScreen(current ? 'detail' : 'list')}
         />
       )}
+      {screen === 'edit' && current && (
+        <SetupScreen
+          settings={current.settings}
+          initialName={current.name}
+          presets={presets}
+          editId={current.id}
+          onSave={(name, s) => { update(list => editPreset(list, current.id, name, s)); setScreen('detail'); }}
+          onCancel={() => setScreen('detail')}
+        />
+      )}
       {screen === 'detail' && current && (
         <PresetDetail
           key={current.id}
@@ -97,6 +107,7 @@ export default function App() {
           presets={presets}
           onPlay={() => play(current.id)}
           onRename={name => update(list => renamePreset(list, current.id, name))}
+          onEdit={() => setScreen('edit')}
           onDuplicate={() => newPreset(current)}
           onDelete={() => { update(list => deletePreset(list, current.id)); setCurrentId(null); setScreen('list'); }}
           onBack={() => setScreen('list')}

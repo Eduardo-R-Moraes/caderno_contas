@@ -7,6 +7,7 @@ interface Props {
   dates: number[];
   fmt: (n: number) => string;
   max?: number;   // teto fixo do eixo (ex.: 100 para %); sem ele, arredonda o maior valor
+  breaks?: number[];   // índices i: a configuração foi editada entre a partida i-1 e a i
 }
 
 const H = 170;
@@ -21,7 +22,7 @@ function niceMax(v: number): number {
 
 const fmtDate = (t: number) => new Date(t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
-export default function ScoreChart({ title, values, dates, fmt, max }: Props) {
+export default function ScoreChart({ title, values, dates, fmt, max, breaks = [] }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
@@ -74,7 +75,7 @@ export default function ScoreChart({ title, values, dates, fmt, max }: Props) {
       <div className="chart-box" ref={boxRef}>
         {w > 0 && (
           <svg width={w} height={H} role="img" tabIndex={0}
-            aria-label={`${title}: ${n} partidas, última ${fmt(values[last])}. Use as setas para ver cada partida.`}
+            aria-label={`${title}: ${n} partidas, última ${fmt(values[last])}.${breaks.map(i => ` Configuração editada antes da partida ${i + 1}.`).join('')} Use as setas para ver cada partida.`}
             onPointerMove={pick} onPointerLeave={() => setHover(null)} onKeyDown={key} onBlur={() => setHover(null)}>
             {ticks.map(t => (
               <g key={t}>
@@ -84,6 +85,9 @@ export default function ScoreChart({ title, values, dates, fmt, max }: Props) {
             ))}
             <text className="tick" x={x(0)} y={H - 6} textAnchor="start">1</text>
             <text className="tick" x={x(last)} y={H - 6} textAnchor="end">{n}</text>
+            {breaks.map(i => (
+              <line key={`edit${i}`} className="edit" x1={x(i - 0.5)} x2={x(i - 0.5)} y1={PAD.top} y2={PAD.top + ih} />
+            ))}
             <path className="area" d={area} />
             <path className="line" d={line} />
             {values.map((v, i) => (showMarkers || i === last) && (

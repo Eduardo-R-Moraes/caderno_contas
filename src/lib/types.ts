@@ -40,7 +40,8 @@ export interface Preset {
   name: string;
   createdAt: number;
   lastPlayedAt?: number;
-  settings: Settings;     // não muda depois de criada (para treinar outra coisa, duplica)
+  settings: Settings;     // pode ser editada; cada edição fica marcada em "edits"
   stats: Stats;           // o caderninho desta configuração
   scores: ScoreEntry[];   // uma linha por partida completa
+  edits?: number[];       // quando as settings mudaram (para marcar nos gráficos)
 }

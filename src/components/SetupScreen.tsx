@@ -18,11 +18,12 @@ interface Props {
   settings: Settings;
   initialName: string;
   presets: Preset[];   // para não repetir nome
+  editId?: string;     // editando uma configuração salva (sem ele, cria uma nova)
   onSave: (name: string, s: Settings) => void;
   onCancel: () => void;
 }
 
-export default function SetupScreen({ settings, initialName, presets, onSave, onCancel }: Props) {
+export default function SetupScreen({ settings, initialName, presets, editId, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(settings));
   const [name, setName] = useState(initialName);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export default function SetupScreen({ settings, initialName, presets, onSave, on
     setDraft(d => ({ ...d, operator: on ? [...d.operator, op] : d.operator.filter(o => o !== op) }));
 
   function save() {
-    const nameError = validateName(presets, name);
+    const nameError = validateName(presets, name, editId);
     if (nameError) { setError(nameError); return; }
     const res = readSetupForm(draft, settings);
     if ('error' in res) { setError(res.error); return; }
@@ -45,12 +46,14 @@ export default function SetupScreen({ settings, initialName, presets, onSave, on
   return (
     <section id="screen-setup" className="wrap" style={{ gap: 16 }}>
       <div className="panel">
-        <div className="panel-head"><h2>Nova configuração</h2></div>
+        <div className="panel-head"><h2>{editId ? 'Editar configuração' : 'Nova configuração'}</h2></div>
         <div className="field">
           <label className="eyebrow" htmlFor="preset-name">Nome</label>
           <input type="text" id="preset-name" className="name-input" value={name} maxLength={40} placeholder="Ex.: Tabuada do 6 ao 9"
             onChange={e => setName(e.target.value)} />
-          <p className="hint">Depois de salva, só o nome pode mudar. Assim os pontos dela sempre podem ser comparados entre si.</p>
+          <p className="hint">{editId
+            ? 'O caderninho e a evolução são mantidos; os gráficos marcam a partir de quando a configuração mudou.'
+            : 'Dá para editar depois de salva.'}</p>
         </div>
       </div>
 

@@ -15,6 +15,15 @@ export function renamePreset(list: Preset[], id: string, name: string): Preset[]
   return list.map(p => p.id === id ? { ...p, name: name.trim() } : p);
 }
 
+// Mantém caderninho e evolução; só registra a edição se as settings mudaram de fato
+export function editPreset(list: Preset[], id: string, name: string, settings: Settings, now = Date.now()): Preset[] {
+  return list.map(p => {
+    if (p.id !== id) return p;
+    const changed = JSON.stringify(p.settings) !== JSON.stringify(settings);
+    return { ...p, name: name.trim(), settings: structuredClone(settings), ...(changed && { edits: [...(p.edits ?? []), now] }) };
+  });
+}
+
 export function deletePreset(list: Preset[], id: string): Preset[] {
   return list.filter(p => p.id !== id);
 }
