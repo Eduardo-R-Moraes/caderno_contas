@@ -4,33 +4,65 @@
 import { useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS } from './lib/config';
 import { load, save } from './lib/storage';
-import type { Round, Settings, Stats } from './lib/types';
+import { createPreset, deletePreset, duplicateDraftName, finishRound, migrateLegacy, renamePreset, setStats } from './lib/presets';
+import type { Preset, Round, Settings, Stats } from './lib/types';
+import PresetList from './components/PresetList';
+import PresetDetail from './components/PresetDetail';
 import SetupScreen from './components/SetupScreen';
 import GameScreen from './components/GameScreen';
 import EndScreen from './components/EndScreen';
 
-type Screen = 'setup' | 'game' | 'end';
+type Screen = 'list' | 'new' | 'detail' | 'game' | 'end';
+
+// Na primeira vez, a configuração e o caderninho antigos viram a primeira configuração salva
+function initialPresets(): Preset[] {
+  const saved = load<Preset[] | null>('cc.presets', null);
+  if (saved) return saved;
+  const migrated = migrateLegacy(load<Partial<Settings> | null>('cc.settings', null), load<Stats | null>('cc.stats', null));
+  save('cc.presets', migrated);
+  return migrated;
+}
 
 export default function App() {
-  const [settings, setSettings] = useState<Settings>(() => Object.assign(structuredClone(DEFAULT_SETTINGS), load('cc.settings', {})));
-  const [stats, setStats] = useState<Stats>(() => load('cc.stats', {}));   // o caderninho
-  const [screen, setScreen] = useState<Screen>('setup');
+  const [presets, setPresets] = useState<Preset[]>(initialPresets);
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<{ name: string; settings: Settings }>({ name: '', settings: DEFAULT_SETTINGS });   // base da tela "nova"
+  const [screen, setScreen] = useState<Screen>('list');
   const [roundId, setRoundId] = useState(0);   // muda a cada partida para recomeçar a tela de jogo do zero
   const [lastRound, setLastRound] = useState<Round | null>(null);
+
+  const current = presets.find(p => p.id === currentId) ?? null;
 
   useEffect(() => {
     document.body.classList.toggle('in-game', screen === 'game');
     window.scrollTo(0, 0);
   }, [screen, roundId]);
 
-  function updateStats(next: Stats) {
-    setStats(next);
-    save('cc.stats', next);
+  // Sempre a partir da lista mais recente: na última conta, onStats e onEnd chegam no mesmo clique
+  function update(change: (list: Preset[]) => Preset[]) {
+    setPresets(list => {
+      const next = change(list);
+      save('cc.presets', next);
+      return next;
+    });
   }
 
-  function startRound() {
-    setRoundId(id => id + 1);
+  function play(id: string) {
+    setCurrentId(id);
+    setRoundId(n => n + 1);
     setScreen('game');
+  }
+
+  function open(id: string) {
+    setCurrentId(id);
+    setScreen('detail');
+  }
+
+  function newPreset(base?: Preset) {
+    setDraft(base
+      ? { name: duplicateDraftName(base.name), settings: base.settings }
+      : { name: '', settings: DEFAULT_SETTINGS });
+    setScreen('new');
   }
 
   return (
@@ -42,23 +74,45 @@ export default function App() {
         </div>
       </header>
 
-      {screen === 'setup' && (
+      {screen === 'list' && (
+        <PresetList presets={presets} onPlay={play} onOpen={open} onNew={() => newPreset()} />
+      )}
+      {screen === 'new' && (
         <SetupScreen
-          settings={settings}
-          onStart={s => { setSettings(s); save('cc.settings', s); startRound(); }}
+          settings={draft.settings}
+          initialName={draft.name}
+          presets={presets}
+          onSave={(name, s) => {
+            const next = createPreset(presets, name, s);
+            update(() => next);
+            open(next[next.length - 1].id);
+          }}
+          onCancel={() => setScreen(current ? 'detail' : 'list')}
         />
       )}
-      {screen === 'game' && (
+      {screen === 'detail' && current && (
+        <PresetDetail
+          key={current.id}
+          preset={current}
+          presets={presets}
+          onPlay={() => play(current.id)}
+          onRename={name => update(list => renamePreset(list, current.id, name))}
+          onDuplicate={() => newPreset(current)}
+          onDelete={() => { update(list => deletePreset(list, current.id)); setCurrentId(null); setScreen('list'); }}
+          onBack={() => setScreen('list')}
+        />
+      )}
+      {screen === 'game' && current && (
         <GameScreen
           key={roundId}
-          settings={settings}
-          stats={stats}
-          onStats={updateStats}
-          onEnd={round => { setLastRound(round); setScreen('end'); }}
+          settings={current.settings}
+          stats={current.stats}
+          onStats={stats => update(list => setStats(list, current.id, stats))}
+          onEnd={round => { update(list => finishRound(list, current.id, round)); setLastRound(round); setScreen('end'); }}
         />
       )}
-      {screen === 'end' && lastRound && (
-        <EndScreen round={lastRound} onAgain={startRound} onConfig={() => setScreen('setup')} />
+      {screen === 'end' && lastRound && current && (
+        <EndScreen round={lastRound} onAgain={() => play(current.id)} onDetail={() => open(current.id)} onList={() => setScreen('list')} />
       )}
     </div>
   );

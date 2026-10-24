@@ -32,3 +32,15 @@ export interface Raffle { cands: Cand[]; total: number; chosen: number }
 
 export interface HistoryItem { q: Question; correct: boolean; ms: number; given: number }
 export interface Round { rights: number; wrongs: number; score: number; roundSettings: Settings; history: HistoryItem[] }
+
+// Configuração salva: cada uma tem o próprio caderninho e o próprio histórico
+export interface ScoreEntry { at: number; done: number; rights: number; score: number; avgMs: number }
+export interface Preset {
+  id: string;
+  name: string;
+  createdAt: number;
+  lastPlayedAt?: number;
+  settings: Settings;     // não muda depois de criada (para treinar outra coisa, duplica)
+  stats: Stats;           // o caderninho desta configuração
+  scores: ScoreEntry[];   // uma linha por partida completa
+}
