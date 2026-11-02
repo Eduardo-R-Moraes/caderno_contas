@@ -1,5 +1,5 @@
 /* Layout: tema 8 bits (caixas de diálogo de console, cantos serrilhados, vermelho como cor principal);
-   tela de configuração em blocos por operação, partida com a conta grande à esquerda e a rifa à direita */
+   tela de configuração em blocos por operação, partida com a conta grande no centro */
 :root {
   --paper: #f3e9d6;
   --grid: rgba(26, 20, 35, 0.06);
@@ -26,20 +26,13 @@
     4px 100%, 4px calc(100% - 4px), 0 calc(100% - 4px));
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root {
     --paper: #120d17; --grid: rgba(255, 59, 79, 0.05); --surface: #1d1525;
     --ink: #f6ecda; --muted: #a8998c; --frame: #f6ecda; --line: #3b2d47;
     --accent: #ff3b4f; --accent-deep: #9e1027; --accent-soft: rgba(255, 59, 79, 0.16); --on-accent: #fffaf0;
     --gold: #ffd23f; --ok: #4ade80; --ok-soft: rgba(74, 222, 128, 0.14); --err: #ff3b4f; --err-soft: rgba(255, 59, 79, 0.16);
     color-scheme: dark;
   }
-}
-:root[data-theme="dark"] {
-  --paper: #120d17; --grid: rgba(255, 59, 79, 0.05); --surface: #1d1525;
-  --ink: #f6ecda; --muted: #a8998c; --frame: #f6ecda; --line: #3b2d47;
-  --accent: #ff3b4f; --accent-deep: #9e1027; --accent-soft: rgba(255, 59, 79, 0.16); --on-accent: #fffaf0;
-  --gold: #ffd23f; --ok: #4ade80; --ok-soft: rgba(74, 222, 128, 0.14); --err: #ff3b4f; --err-soft: rgba(255, 59, 79, 0.16);
-  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -61,6 +54,7 @@ body {
   -webkit-font-smoothing: none;
 }
 .wrap { width: 100%; max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+.screen { gap: 16px; }
 
 header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 header.top > div { display: flex; flex-direction: column; gap: 12px; }
@@ -257,7 +251,8 @@ button, .seg label, .op-title { touch-action: manipulation; }
   .scorebar .chip { min-width: 0; padding: 6px 8px; }
   .scorebar .chip .eyebrow { font-size: 0.72rem; letter-spacing: 0.02em; }
   .scorebar .chip b { font-size: 0.7rem; }
-  #btn-stop { grid-column: 1 / -1; padding: 8px; }
+  #btn-sound { padding: 8px; }
+  #btn-stop { grid-column: span 3; padding: 8px; }
 
   .board { padding-block: 20px; gap: 12px; }
   .answer-row { max-width: none; }

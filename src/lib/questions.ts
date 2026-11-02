@@ -7,7 +7,7 @@ import type { Op, Order, Question, Range, Settings } from './types';
 type Ranges = Pick<Range, 'leftInitial' | 'leftFinal' | 'rightInitial' | 'rightFinal'>;
 interface DivOption { b: number; m: number; kMin: number; kMax: number }
 
-export function randInt(min: number, max: number): number {
+function randInt(min: number, max: number): number {
   if (min > max) [min, max] = [max, min];
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -51,10 +51,13 @@ function divisionOptions(r: Ranges, order: Order, b: number): DivOption | null {
   return kMin <= kMax ? { b, m, kMin, kMax } : null;
 }
 
-const divCache: Record<string, DivOption[]> = {};
+// Guarda só as últimas listas: o formulário recalcula a cada tecla e cada range digitado viraria uma entrada
+const DIV_CACHE_SIZE = 20;
+const divCache = new Map<string, DivOption[]>();
 function divisionList(r: Ranges, order: Order): DivOption[] | null {
   const id = [r.leftInitial, r.leftFinal, r.rightInitial, r.rightFinal, order].join('|');
-  if (divCache[id]) return divCache[id];
+  const cached = divCache.get(id);
+  if (cached) return cached;
   const [R1, R2] = bounds(r.rightInitial, r.rightFinal);
   if (R2 - R1 > BIG) return null;            // range enorme: sorteia sem lista
   const list: DivOption[] = [];
@@ -62,7 +65,9 @@ function divisionList(r: Ranges, order: Order): DivOption[] | null {
     const opt = divisionOptions(r, order, b);
     if (opt) list.push(opt);
   }
-  return (divCache[id] = list);
+  if (divCache.size >= DIV_CACHE_SIZE) divCache.delete(divCache.keys().next().value!);
+  divCache.set(id, list);
+  return list;
 }
 
 // Casas decimais: em vez de sortear 2,5, sorteia o inteiro 25 num range multiplicado por 10
@@ -103,7 +108,7 @@ export function randomQuestion(s: Settings): Question {
     if (rd > 0) {
       // Resultado com casas: qualquer divisão vale, só não pode dividir por zero
       const [a, b] = randomPair(rs, s.order, true);
-      return { op, a: a / f, b: b / f, rd };
+      return { op, a: a / f, b: b / f, resultDecimals: rd };
     }
 
     // Resultado inteiro: dividendo no range da esquerda, divisor no range da direita
@@ -116,7 +121,7 @@ export function randomQuestion(s: Settings): Question {
     }
     if (!opt) opt = { b: 1, m: 1, kMin: 1, kMax: 1 };
     const k = randInt(opt.kMin, opt.kMax);
-    return { op, a: (k * opt.m) / f, b: opt.b / f, rd: 0 };
+    return { op, a: (k * opt.m) / f, b: opt.b / f, resultDecimals: 0 };
   }
 
   const [a, b] = randomPair(rs, s.order, false);
@@ -126,7 +131,8 @@ export function randomQuestion(s: Settings): Question {
 // Resposta certa de uma conta (arredondada quando a divisão pede casas)
 export function answerOf(q: Question): number {
   const exact = OPS[q.op].calc(q.a, q.b);
-  if (q.rd && q.rd > 0) return Math.round(exact * 10 ** q.rd) / 10 ** q.rd;
+  const rd = q.resultDecimals ?? 0;
+  if (rd > 0) return Math.round(exact * 10 ** rd) / 10 ** rd;
   return Math.round(exact * 1e9) / 1e9;   // limpa sujeira de ponto flutuante (0,1 + 0,2)
 }
 
@@ -134,8 +140,9 @@ export function answerOf(q: Question): number {
 export function isCorrect(q: Question, given: number): boolean {
   const exact = OPS[q.op].calc(q.a, q.b);
   if (Math.abs(given - exact) < 1e-9) return true;
-  if (q.rd && q.rd > 0) {
-    const f = 10 ** q.rd;
+  const rd = q.resultDecimals ?? 0;
+  if (rd > 0) {
+    const f = 10 ** rd;
     return Math.abs(Math.round(given * f) / f - answerOf(q)) < 1e-9;
   }
   return false;

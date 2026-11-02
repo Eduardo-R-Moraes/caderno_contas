@@ -1,3 +1,6 @@
+// ============================================================
+// Ponto de entrada: monta o app na página
+// ============================================================
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';

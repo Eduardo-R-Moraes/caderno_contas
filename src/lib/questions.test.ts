@@ -70,7 +70,7 @@ describe('answerOf / isCorrect', () => {
     expect(isCorrect({ op: 'sum', a: 0.1, b: 0.2 }, 0.3)).toBe(true);
   });
   it('arredonda a divisão com casas e aceita o valor exato', () => {
-    const q = { op: 'division' as const, a: 10, b: 3, rd: 2 };
+    const q = { op: 'division' as const, a: 10, b: 3, resultDecimals: 2 };
     expect(answerOf(q)).toBe(3.33);
     expect(isCorrect(q, 3.33)).toBe(true);
     expect(isCorrect(q, 3.333)).toBe(true);

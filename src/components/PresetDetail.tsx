@@ -3,13 +3,12 @@
 // ============================================================
 import { useState, type FormEvent } from 'react';
 import { OPS } from '../lib/config';
-import { fmtNum, fmtSec } from '../lib/format';
-import { validateName } from '../lib/presets';
+import { fmtDay, fmtNum, fmtSec, plural } from '../lib/format';
+import { bestScore, validateName } from '../lib/presets';
 import type { Order, Preset } from '../lib/types';
 import ScoreChart from './ScoreChart';
 
 const ORDER_LABEL: Record<Order, string> = { none: 'Qualquer ordem', '>': 'Esquerda ≥ direita', '<': 'Esquerda ≤ direita' };
-const fmtDay = (t: number) => new Date(t).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 const fmtPct = (n: number) => `${Math.round(n)}%`;
 
 interface Props {
@@ -36,18 +35,18 @@ export default function PresetDetail({ preset, presets, onPlay, onRename, onEdit
     if (!err) onRename(name);
   }
 
-  const best = scores.length ? Math.max(...scores.map(x => x.score)) : null;
+  const best = bestScore(preset);
   const lastScore = scores.length ? scores[scores.length - 1].score : null;
   const dates = scores.map(x => x.at);
   // Edição entre duas partidas: marca antes da primeira partida jogada depois dela
   const breaks = [...new Set((preset.edits ?? []).map(t => scores.findIndex(x => x.at > t)).filter(i => i > 0))];
 
   return (
-    <section id="screen-detail" className="wrap" style={{ gap: 16 }}>
+    <section className="wrap screen">
       <div className="panel">
         <div className="panel-head">
           <h2>{preset.name}</h2>
-          <button className="small" id="btn-back" onClick={onBack}>Voltar</button>
+          <button className="small" onClick={onBack}>Voltar</button>
         </div>
         <div className="summary">
           <div className="chip"><span className="eyebrow">Partidas</span><b>{scores.length}</b></div>
@@ -56,8 +55,8 @@ export default function PresetDetail({ preset, presets, onPlay, onRename, onEdit
           <div className="chip"><span className="eyebrow">Contas vistas</span><b>{Object.keys(preset.stats).length}</b></div>
         </div>
         <div className="actions">
-          <button className="primary" id="btn-play" onClick={onPlay}>Jogar</button>
-          <button id="btn-duplicate" onClick={onDuplicate}>Duplicar</button>
+          <button className="primary" onClick={onPlay}>Jogar</button>
+          <button onClick={onDuplicate}>Duplicar</button>
         </div>
       </div>
 
@@ -106,27 +105,27 @@ export default function PresetDetail({ preset, presets, onPlay, onRename, onEdit
                 <span>
                   <b>{OPS[op].label}</b>: {isDiv ? 'dividendo' : 'esquerda'} <span className="num">{fmtNum(r.leftInitial)}–{fmtNum(r.leftFinal)}</span>,
                   {' '}{isDiv ? 'divisor' : 'direita'} <span className="num">{fmtNum(r.rightInitial)}–{fmtNum(r.rightFinal)}</span>
-                  {r.decimals > 0 && <>, {r.decimals} {r.decimals === 1 ? 'casa' : 'casas'}</>}
-                  {isDiv && r.resultDecimals ? <>, resultado com {r.resultDecimals} {r.resultDecimals === 1 ? 'casa' : 'casas'}</> : null}
+                  {r.decimals > 0 && <>, {r.decimals} {plural(r.decimals, 'casa', 'casas')}</>}
+                  {isDiv && r.resultDecimals ? <>, resultado com {r.resultDecimals} {plural(r.resultDecimals, 'casa', 'casas')}</> : null}
                 </span>
               </li>
             );
           })}
         </ul>
         <p className="hint">
-          {ORDER_LABEL[s.order]} · {s.roundLength == null ? 'até eu parar' : `${s.roundLength} contas por partida`} · foco nas difíceis: {s.candidates} {s.candidates === 1 ? 'candidata' : 'candidatas'}
+          {ORDER_LABEL[s.order]} · {s.roundLength == null ? 'até eu parar' : `${s.roundLength} contas por partida`} · foco nas difíceis: {s.candidates} {plural(s.candidates, 'candidata', 'candidatas')}
         </p>
         <div className="actions">
-          <button className="small" id="btn-edit" onClick={onEdit}>Editar configurações</button>
+          <button className="small" onClick={onEdit}>Editar configurações</button>
         </div>
         <p className="hint">Editar mantém o caderninho e a evolução (os gráficos marcam a mudança). “Duplicar” cria uma cópia com tudo zerado.</p>
-        <div className="actions" id="delete-box">
+        <div className="actions">
           {!confirming
-            ? <button className="small danger" id="btn-delete" onClick={() => setConfirming(true)}>Apagar configuração</button>
+            ? <button className="small danger" onClick={() => setConfirming(true)}>Apagar configuração</button>
             : <>
                 <span className="hint">Apagar “{preset.name}” com o caderninho e a evolução?</span>
-                <button className="small danger" id="btn-delete-yes" onClick={onDelete}>Apagar</button>
-                <button className="small" id="btn-delete-no" onClick={() => setConfirming(false)}>Cancelar</button>
+                <button className="small danger" onClick={onDelete}>Apagar</button>
+                <button className="small" onClick={() => setConfirming(false)}>Cancelar</button>
               </>}
         </div>
       </div>

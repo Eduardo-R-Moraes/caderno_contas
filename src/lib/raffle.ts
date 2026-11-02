@@ -21,9 +21,9 @@ export function nextQuestion(settings: Settings, stats: Stats, recent: string[])
     const q = randomQuestion(settings);
     const key = makeKey(q);
     let note: number, tag: Tag;
-    if (recent.includes(key)) { note = JUST_SEEN; tag = 'recente'; }
-    else if (stats[key])      { note = difficulty(stats[key]); tag = 'vista'; }
-    else                      { note = NEVER_SEEN; tag = 'nova'; }
+    if (recent.includes(key)) { note = JUST_SEEN; tag = 'recent'; }
+    else if (stats[key])      { note = difficulty(stats[key]); tag = 'seen'; }
+    else                      { note = NEVER_SEEN; tag = 'new'; }
     cands.push({ q, key, note, tag });
   }
 

@@ -1,4 +1,7 @@
-export type Op = 'sum' | 'subtraction' | 'multiplication' | 'division';
+// ============================================================
+// Tipos
+// ============================================================
+export type Op ='sum' | 'subtraction' | 'multiplication' | 'division';
 export type Order = 'none' | '>' | '<';
 
 export interface Range {
@@ -21,12 +24,12 @@ export interface Settings {
   division: Range;
 }
 
-export interface Question { op: Op; a: number; b: number; rd?: number }
+export interface Question { op: Op; a: number; b: number; resultDecimals?: number }
 
 export interface Stat { attempts: number; wrongs: number; avgMs: number }
 export type Stats = Record<string, Stat>;   // o caderninho: { "sum:7:8": { attempts, wrongs, avgMs } }
 
-export type Tag = 'nova' | 'vista' | 'recente';
+export type Tag = 'new' | 'seen' | 'recent';
 export interface Cand { q: Question; key: string; note: number; tag: Tag }
 export interface Raffle { cands: Cand[]; total: number; chosen: number }
 

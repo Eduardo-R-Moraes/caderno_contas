@@ -1,4 +1,6 @@
+// ============================================================
 // Gráfico de linha da evolução de uma configuração (SVG, sem bibliotecas)
+// ============================================================
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 interface Props {

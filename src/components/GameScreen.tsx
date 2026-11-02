@@ -5,8 +5,9 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { RECENT_SIZE } from '../lib/config';
 import { answerOf, isCorrect } from '../lib/questions';
 import { nextQuestion, record } from '../lib/raffle';
-import { fmtNum, fmtQ, fmtSec } from '../lib/format';
-import { play } from '../lib/sounds';
+import { fmtNum, fmtQ, fmtSec, plural } from '../lib/format';
+import { answered } from '../lib/presets';
+import { isMuted, play, setMuted } from '../lib/sounds';
 import type { Question, Round, Settings, Stats } from '../lib/types';
 import Timer from './Timer';
 
@@ -32,6 +33,7 @@ export default function GameScreen({ settings, stats, onStats, onEnd }: Props) {
   const [current, setCurrent] = useState<Current>(() => askNext(settings, stats, []));
   const [feedback, setFeedback] = useState<Feedback>({ cls: '', text: 'Digite a resposta e aperte Enter.' });
   const [answer, setAnswer] = useState('');
+  const [muted, setMutedState] = useState(isMuted);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus({ preventScroll: true }); }, [current]);
@@ -41,16 +43,23 @@ export default function GameScreen({ settings, stats, onStats, onEnd }: Props) {
   // Encolhe a fonte para a conta inteira caber na largura do quadro (cada caractere da fonte pixel = 1 em)
   const chars = (qText + ' = ?').length;
   const fontSize = `min(3.2rem, calc(92cqi / ${chars}))`;
-  const qLabel = q.rd && q.rd > 0
-    ? `Quanto é (arredonde para ${q.rd} ${q.rd === 1 ? 'casa' : 'casas'})`
+  const rd = q.resultDecimals ?? 0;
+  const qLabel = rd > 0
+    ? `Quanto é (arredonde para ${rd} ${plural(rd, 'casa', 'casas')})`
     : 'Quanto é';
 
-  const done = round.rights + round.wrongs;
+  const done = answered(round);
   const len = round.roundSettings.roundLength;
   const progress = len ? `${Math.min(done + 1, len)}/${len}` : String(done + 1);
 
   function toggleSign() {
     setAnswer(v => v.startsWith('-') ? v.slice(1) : '-' + v);
+    inputRef.current?.focus();
+  }
+
+  function toggleMute() {
+    setMuted(!muted);
+    setMutedState(!muted);
     inputRef.current?.focus();
   }
 
@@ -82,7 +91,7 @@ export default function GameScreen({ settings, stats, onStats, onEnd }: Props) {
       ? { cls: 'ok', text: `✓ ${qText} = ${fmtNum(answerOf(q))} · ${fmtSec(ms)} · +${points} pts` }
       : { cls: 'err', text: `✗ ${qText} = ${fmtNum(answerOf(q))} (você: ${fmtNum(given)}) · ${fmtSec(ms)}` });
 
-    if (len && nextRound.rights + nextRound.wrongs >= len) { onEnd(nextRound); return; }
+    if (len && answered(nextRound) >= len) { onEnd(nextRound); return; }
     setRound(nextRound);
     setRecent(nextRecent);
     setAnswer('');
@@ -90,27 +99,29 @@ export default function GameScreen({ settings, stats, onStats, onEnd }: Props) {
   }
 
   return (
-    <section id="screen-game" className="wrap" style={{ gap: 16 }}>
+    <section className="wrap screen">
       <div className="scorebar">
-        <div className="chip"><span className="eyebrow">Conta</span><b id="s-progress">{progress}</b></div>
-        <div className="chip ok"><span className="eyebrow">Acertos</span><b id="s-rights">{round.rights}</b></div>
-        <div className="chip err"><span className="eyebrow">Erros</span><b id="s-wrongs">{round.wrongs}</b></div>
-        <div className="chip score"><span className="eyebrow">Pontos</span><b id="s-score">{round.score}</b></div>
+        <div className="chip"><span className="eyebrow">Conta</span><b>{progress}</b></div>
+        <div className="chip ok"><span className="eyebrow">Acertos</span><b>{round.rights}</b></div>
+        <div className="chip err"><span className="eyebrow">Erros</span><b>{round.wrongs}</b></div>
+        <div className="chip score"><span className="eyebrow">Pontos</span><b>{round.score}</b></div>
         <div className="spacer"></div>
+        <button id="btn-sound" title={muted ? 'Ligar som' : 'Desligar som'} aria-label="Som" aria-pressed={!muted}
+          onClick={toggleMute}>{muted ? '🔇' : '🔊'}</button>
         <button id="btn-stop" onClick={() => onEnd(round)}>Encerrar partida</button>
       </div>
 
       <div className="panel board">
-        <span className="eyebrow" id="q-label">{qLabel}</span>
-        <div className="question" id="question" style={{ fontSize }}>{qText} <span className="eq">=</span> ?</div>
-        <form className="answer-row" id="answer-form" autoComplete="off" onSubmit={submit}>
-          <button type="button" className="sign" id="btn-sign" title="Trocar sinal" aria-label="Trocar sinal" onClick={toggleSign}>±</button>
-          <input ref={inputRef} type="text" id="answer" inputMode="decimal" enterKeyHint="send" autoCorrect="off" spellCheck={false}
+        <span className="eyebrow">{qLabel}</span>
+        <div className="question" style={{ fontSize }}>{qText} <span className="eq">=</span> ?</div>
+        <form className="answer-row" autoComplete="off" onSubmit={submit}>
+          <button type="button" className="sign" title="Trocar sinal" aria-label="Trocar sinal" onClick={toggleSign}>±</button>
+          <input ref={inputRef} type="text" inputMode="decimal" enterKeyHint="send" autoCorrect="off" spellCheck={false}
             aria-label="Sua resposta" value={answer} onChange={e => setAnswer(e.target.value)} />
           <button type="submit" className="primary">OK</button>
         </form>
         <Timer key={current.startedAt} startedAt={current.startedAt} />
-        <div className={'feedback ' + feedback.cls} id="feedback">{feedback.text}</div>
+        <div className={'feedback ' + feedback.cls}>{feedback.text}</div>
       </div>
     </section>
   );

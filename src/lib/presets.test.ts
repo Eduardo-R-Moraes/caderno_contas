@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from './config';
-import { createPreset, deletePreset, describeSettings, editPreset, finishRound, migrateLegacy, renamePreset, setStats, validateName } from './presets';
+import { bestScore, createPreset, deletePreset, describeSettings, editPreset, finishRound, migrateLegacy, renamePreset, setStats, validateName } from './presets';
 import type { Preset, Round, Settings } from './types';
 
 const S = (patch: Partial<Settings> = {}): Settings => ({ ...structuredClone(DEFAULT_SETTINGS), ...patch });
@@ -49,11 +49,17 @@ describe('dados por configuração', () => {
     out = finishRound(out, out[0].id, round(15, 5, 20), 200);
     expect(out[0].scores).toEqual([{ at: 200, done: 20, rights: 15, score: 75, avgMs: 2000 }]);
     expect(out[1].scores).toEqual([]);
+    expect(bestScore(out[0])).toBe(75);
+    expect(bestScore(out[1])).toBeNull();
   });
   it('"até eu parar" entra se respondeu ao menos uma', () => {
     const list = two();
     expect(finishRound(list, list[1].id, round(0, 0, null))[1].scores).toEqual([]);
     expect(finishRound(list, list[1].id, round(2, 0, null))[1].scores).toHaveLength(1);
+  });
+  it('encerrada sem nenhuma resposta não marca como jogada', () => {
+    const list = two();
+    expect(finishRound(list, list[0].id, round(0, 0, 20), 100)).toBe(list);
   });
 });
 

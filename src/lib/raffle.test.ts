@@ -38,11 +38,11 @@ describe('nextQuestion', () => {
       expect(r.cands).toHaveLength(5);
       expect(r.chosen).toBeGreaterThanOrEqual(0); expect(r.chosen).toBeLessThan(5);
       for (const c of r.cands) {
-        if (c.key === 'sum:1:1') expect([c.tag, c.note]).toEqual(['recente', JUST_SEEN]);
-        else expect(c.tag).toBe('vista');
+        if (c.key === 'sum:1:1') expect([c.tag, c.note]).toEqual(['recent', JUST_SEEN]);
+        else expect(c.tag).toBe('seen');
       }
       expect(r.total).toBeCloseTo(r.cands.reduce((t, c) => t + c.note, 0));
     }
-    expect(nextQuestion(s, {}, []).cands.every(c => c.tag === 'nova' && c.note === NEVER_SEEN)).toBe(true);
+    expect(nextQuestion(s, {}, []).cands.every(c => c.tag === 'new' && c.note === NEVER_SEEN)).toBe(true);
   });
 });

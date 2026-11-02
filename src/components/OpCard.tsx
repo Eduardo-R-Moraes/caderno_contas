@@ -2,6 +2,7 @@
 // Um bloco de operação na configuração
 // ============================================================
 import { OPS } from '../lib/config';
+import { plural } from '../lib/format';
 import { countPairs } from '../lib/questions';
 import { readOp, type OpDraft } from '../lib/setupForm';
 import type { Op, Order } from '../lib/types';
@@ -27,10 +28,10 @@ export default function OpCard({ op, on, draft, order, onToggle, onChange }: Pro
   const countText = n === undefined ? ''
     : n === null ? 'Muitas contas possíveis.'
     : n === 0 ? 'Nenhuma conta possível com esses ranges e essa ordem.'
-    : `${n.toLocaleString('pt-BR')} ${n === 1 ? 'conta possível' : 'contas possíveis'}.`;
+    : `${n.toLocaleString('pt-BR')} ${plural(n, 'conta possível', 'contas possíveis')}.`;
 
   const num = (field: 'leftInitial' | 'leftFinal' | 'rightInitial' | 'rightFinal', aria: string) => (
-    <input type="number" step="any" id={`${op}-${field}`} value={draft[field]}
+    <input type="number" step="any" value={draft[field]}
       onChange={e => onChange({ [field]: e.target.value })} aria-label={`${label}: ${aria}`} />
   );
 
@@ -61,7 +62,7 @@ export default function OpCard({ op, on, draft, order, onToggle, onChange }: Pro
           </select>
         </>}
       </div>
-      <p className="hint count" id={`${op}-count`} style={{ color: n === 0 ? 'var(--err)' : undefined }}>{countText}</p>
+      <p className="hint count" style={{ color: n === 0 ? 'var(--err)' : undefined }}>{countText}</p>
     </div>
   );
 }

@@ -3,15 +3,16 @@
 // ============================================================
 import { useState } from 'react';
 import { OP_KEYS } from '../lib/config';
+import { plural } from '../lib/format';
 import { validateName } from '../lib/presets';
 import { readSetupForm, toDraft, type Draft, type OpDraft } from '../lib/setupForm';
 import type { Op, Order, Preset, Settings } from '../lib/types';
 import OpCard from './OpCard';
 
-const ORDERS: { value: Order; id: string; label: string }[] = [
-  { value: 'none', id: 'order-none', label: 'Qualquer' },
-  { value: '>', id: 'order-gt', label: 'Esq. ≥ dir.' },
-  { value: '<', id: 'order-lt', label: 'Esq. ≤ dir.' },
+const ORDERS: { value: Order; label: string }[] = [
+  { value: 'none', label: 'Qualquer' },
+  { value: '>', label: 'Esq. ≥ dir.' },
+  { value: '<', label: 'Esq. ≤ dir.' },
 ];
 
 interface Props {
@@ -44,7 +45,7 @@ export default function SetupScreen({ settings, initialName, presets, editId, on
   }
 
   return (
-    <section id="screen-setup" className="wrap" style={{ gap: 16 }}>
+    <section className="wrap screen">
       <div className="panel">
         <div className="panel-head"><h2>{editId ? 'Editar configuração' : 'Nova configuração'}</h2></div>
         <div className="field">
@@ -58,11 +59,8 @@ export default function SetupScreen({ settings, initialName, presets, editId, on
       </div>
 
       <div className="panel">
-        <div className="panel-head">
-          <h2>Operações</h2>
-          <span className="eyebrow">settings.operator</span>
-        </div>
-        <div className="ops" id="ops">
+        <div className="panel-head"><h2>Operações</h2></div>
+        <div className="ops">
           {OP_KEYS.map(op => (
             <OpCard
               key={op}
@@ -84,34 +82,34 @@ export default function SetupScreen({ settings, initialName, presets, editId, on
             <span className="eyebrow">Ordem dos números</span>
             <div className="seg" role="radiogroup" aria-label="Ordem dos números">
               {ORDERS.map(o => (
-                <label key={o.id}>
-                  <input type="radio" name="order" id={o.id} value={o.value} checked={draft.order === o.value} onChange={() => set({ order: o.value })} />
+                <label key={o.value}>
+                  <input type="radio" name="order" value={o.value} checked={draft.order === o.value} onChange={() => set({ order: o.value })} />
                   <span>{o.label}</span>
                 </label>
               ))}
             </div>
           </div>
           <div className="field">
-            <span className="eyebrow">Duração (roundLength)</span>
+            <span className="eyebrow">Duração</span>
             <div className="seg" role="radiogroup" aria-label="Duração">
-              <label><input type="radio" name="length" id="length-free" value="free" checked={draft.lengthFree} onChange={() => set({ lengthFree: true })} /><span>Até eu parar</span></label>
-              <label><input type="radio" name="length" id="length-fixed" value="fixed" checked={!draft.lengthFree} onChange={() => set({ lengthFree: false })} /><span>Fixa</span></label>
+              <label><input type="radio" name="length" value="free" checked={draft.lengthFree} onChange={() => set({ lengthFree: true })} /><span>Até eu parar</span></label>
+              <label><input type="radio" name="length" value="fixed" checked={!draft.lengthFree} onChange={() => set({ lengthFree: false })} /><span>Fixa</span></label>
             </div>
-            <div className="inline" id="length-box" hidden={draft.lengthFree}>
-              <input type="number" id="length-n" min="1" max="500" value={draft.lengthN} onChange={e => set({ lengthN: e.target.value })} aria-label="Quantidade de contas" />
+            <div className="inline" hidden={draft.lengthFree}>
+              <input type="number" min="1" max="500" value={draft.lengthN} onChange={e => set({ lengthN: e.target.value })} aria-label="Quantidade de contas" />
               <span className="hint">contas</span>
             </div>
           </div>
           <div className="field">
-            <span className="eyebrow">Foco nas difíceis: <b className="num" id="k-val">{draft.candidates}</b> candidatas</span>
-            <input type="range" id="k" min="1" max="10" value={draft.candidates} onChange={e => set({ candidates: parseInt(e.target.value, 10) })} aria-label="Quantidade de candidatas por sorteio" />
+            <span className="eyebrow">Foco nas difíceis: <b className="num">{draft.candidates}</b> {plural(draft.candidates, 'candidata', 'candidatas')}</span>
+            <input type="range" min="1" max="10" value={draft.candidates} onChange={e => set({ candidates: parseInt(e.target.value, 10) })} aria-label="Quantidade de candidatas por sorteio" />
             <p className="hint">1 = sorteio comum. Quanto maior, mais o app insiste no que você erra.</p>
           </div>
         </div>
         <div className="actions">
-          <button className="primary" id="btn-save" onClick={save}>Salvar configuração</button>
-          <button id="btn-cancel" onClick={onCancel}>Cancelar</button>
-          <p className="error-msg" id="setup-error" hidden={!error}>{error}</p>
+          <button className="primary" onClick={save}>Salvar configuração</button>
+          <button onClick={onCancel}>Cancelar</button>
+          <p className="error-msg" hidden={!error}>{error}</p>
         </div>
       </div>
     </section>

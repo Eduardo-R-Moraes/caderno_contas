@@ -1,5 +1,5 @@
 // ============================================================
-// Ponto de entrada: liga as telas
+// Raiz do app: liga as telas
 // ============================================================
 import { useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS } from './lib/config';
